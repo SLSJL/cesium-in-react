@@ -1,0 +1,88 @@
+import React, { useEffect, useRef } from "react";
+import "./home.less";
+import { Viewer, CesiumTerrainProvider,Ion } from "cesium";
+import { CesiumToken } from "./constant";
+
+Ion.defaultAccessToken = CesiumToken
+// @ts-ignore
+const Potree = window.Potree
+// @ts-ignore
+const THREE = window.THREE
+// @ts-ignore
+const TWEEN = window.TWEEN
+
+const StartUp = () => {
+  const csmViewerRef = useRef<null | Viewer>(null);
+  const viewerContainerRef = useRef(null);
+
+  const onLoadingTerrain = () => {
+    if (csmViewerRef.current) {
+      csmViewerRef.current.terrainProvider = new CesiumTerrainProvider({
+        url: 'http://localhost:7000/terrain',
+        requestVertexNormals: true
+      })
+    }
+  }
+
+  const initCesium = () => {
+    if (viewerContainerRef.current && !csmViewerRef.current) {
+      const viewer = new Viewer("csm-viewer-container", {
+        infoBox: false, 
+        terrainProvider:  new CesiumTerrainProvider({
+          url: 'http://localhost:7000/terrain',
+          requestVertexNormals: true
+        })
+      });
+      csmViewerRef.current = viewer
+    }
+  }
+
+  const initPotree2 = ()=>{
+    const viewer = new Potree.Viewer(document.getElementById('potree-view'));
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(1*1000*1000);
+		viewer.setClipTask(Potree.ClipTask.SHOW_INSIDE);
+		viewer.loadSettingsFromURL();
+		viewer.setControls(viewer.earthControls ) 
+		viewer.setBackground('black') 
+		
+		// Load and add point cloud to scene
+		let url = "data/tree/metadata.json" // do not forget to put your pointcloud data in the public/pointcloud/ folder
+    // @ts-ignore
+		Potree.loadPointCloud(url).then(e => {
+			let pointcloud = e.pointcloud;
+			let material = pointcloud.material;
+			material.activeAttributeName = "rgba";
+			material.minSize = 2;
+			material.pointSizeType = Potree.PointSizeType.FIXED
+			viewer.scene.addPointCloud(pointcloud);
+			viewer.fitToScreen();
+       // @ts-ignore
+		}, e => console.err("ERROR: ", e));
+  }
+
+  useEffect(() => {
+    initPotree2()
+  }, [viewerContainerRef]);
+
+  return (
+    <>
+      <div className="csm-viewer-tools">
+        <button onClick={() => onLoadingTerrain()}>
+          Load terrain
+        </button>
+      </div>
+
+      <div
+        className="csm-viewer-container"
+        id="csm-viewer-container"
+        ref={viewerContainerRef}
+      ></div>
+      <div id="potree-view"  className="potree-viewer-container">fdsafds</div>
+    </>
+
+  );
+};
+
+export default StartUp;
